@@ -110,7 +110,7 @@ module GeminiSqlChat
       headers: { 'Content-Type' => 'application/json' },
       body: {
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 800 },
+        generationConfig: { temperature: 0.1, maxOutputTokens: 2048 },
         safetySettings: [{ category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }]
       }.to_json,
       timeout: 10
@@ -304,6 +304,18 @@ module GeminiSqlChat
           sql = cleaned_text.gsub(/^sql:/i, '').gsub(/;$/, '').strip
           return { sql: sql, suggested_questions: [] }
           
+        elsif cleaned_text.include?('"sql"')
+          # Intento de JSON SQL fallido/truncado
+          match = cleaned_text.match(/"sql"\s*:\s*"(.*?)"/m) || cleaned_text.match(/"sql"\s*:\s*"(.*)/m)
+          
+          sql = match ? match[1] : cleaned_text
+          # Limpiar artefactos JSON
+          sql = sql.gsub(/\"\}\s*$/, '').gsub(/\"\s*$/, '').gsub(/\\n/, ' ').strip
+          # Des-escapar comillas
+          sql = sql.gsub('\"', '"')
+          
+          return { sql: sql, suggested_questions: [] }
+
         elsif cleaned_text.include?('"text_answer"')
           # Es un intento de JSON que falló (posiblemente truncado o mal formado)
           # Intentamos rescatar el texto con regex
