@@ -240,10 +240,15 @@ module GeminiSqlChat
 
       if role == 'user' && content.present?
         context += "Usuario: \"#{content}\"\n"
-      elsif role == 'assistant' && sql_query.present?
-        # Limitar longitud del SQL en el contexto para no saturar el prompt (máximo 150 caracteres)
-        sql_preview = sql_query.length > 150 ? "#{sql_query[0..150]}..." : sql_query
-        context += "SQL: #{sql_preview}\n"
+      elsif role == 'assistant'
+        if content.present?
+          context += "Asistente: \"#{content}\"\n"
+        end
+        if sql_query.present?
+          # Limitar longitud del SQL en el contexto para no saturar el prompt (máximo 150 caracteres)
+          sql_preview = sql_query.length > 150 ? "#{sql_query[0..150]}..." : sql_query
+          context += "SQL Generado: #{sql_preview}\n"
+        end
       end
     end
     context += "\n"
