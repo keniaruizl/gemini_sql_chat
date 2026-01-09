@@ -13,7 +13,7 @@ module GeminiSqlChat
     schema_text = "TABLAS Y ESTRUCTURA DETECTADA AUTOMÁTICAMENTE:\n\n"
     
     # 1. Obtener modelos válidos
-    models = ApplicationRecord.descendants.reject do |model|
+    models = ::ActiveRecord::Base.descendants.reject do |model|
       model.abstract_class? || 
       IGNORED_MODELS.include?(model.name) ||
       !model.table_exists?
