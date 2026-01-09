@@ -56,7 +56,14 @@ Un motor de Rails que proporciona un chatbot inteligente con capacidades de gene
 ## Configuración y Personalización
 
 ### Layout
-El motor hereda del `ApplicationController` de tu aplicación principal y utiliza el `layout "default"` por defecto. Asegúrate de que tu aplicación tenga este layout o modifica el controlador si necesitas otro comportamiento.
+El motor hereda del `ApplicationController` de tu aplicación principal y utiliza el `layout "default"` por defecto.
+
+Si tu aplicación utiliza otro layout (por ejemplo `application`), puedes crear un initializer en `config/initializers/gemini_chat.rb` para configurarlo:
+
+```ruby
+# config/initializers/gemini_chat.rb
+GeminiSqlChat::ChatController.layout "application"
+```
 
 ### Modelos de Usuario
 El motor asume que existe un modelo `User` y un método `current_user` (como el que proporciona Devise).
