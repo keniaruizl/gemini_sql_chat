@@ -181,7 +181,10 @@ module GeminiSqlChat
       6. No uses punto y coma al final
       7. ⚠️ MUY IMPORTANTE: SIEMPRE agrega "AND tabla.deleted_at IS NULL" para las tablas marcadas con [SOFT DELETE]. Si NO tiene la marca, NO lo agregues.
       8. Si la pregunta hace referencia a resultados anteriores, usa el contexto conversacional para entender la consulta
+      7. ⚠️ MUY IMPORTANTE: SIEMPRE agrega "AND tabla.deleted_at IS NULL" para las tablas marcadas con [SOFT DELETE]. Si NO tiene la marca, NO lo agregues.
+      8. Si la pregunta hace referencia a resultados anteriores, usa el contexto conversacional para entender la consulta
       9. ⚠️ CRÍTICO: USA SOLO LAS COLUMNAS LISTADAS EN EL ESQUEMA. No inventes columnas (ej. no asumas `name` si solo existe `email` o `first_name`). Si no estás seguro, usa `SELECT *`.
+      10. Para comparaciones de texto, usa SIEMPRE `ILIKE` en lugar de `=` (ej. `nombre ILIKE '%juan%'` o `status ILIKE 'activo'`) para evitar problemas de mayúsculas/minúsculas.
 
       REGLAS IMPORTANTES PARA PREGUNTAS SUGERIDAS:
       1. Genera 2-3 preguntas de seguimiento relevantes y útiles basadas en el contexto
