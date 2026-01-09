@@ -279,9 +279,17 @@ module GeminiSqlChat
           raise "JSON válido pero sin claves esperadas"
         end
       rescue JSON::ParserError
-        # Fallback de texto plano para SQL
-        sql = cleaned_content.gsub(/^sql:/i, '').gsub(/;$/, '').strip
-        return { sql: sql, suggested_questions: [] }
+        # Fallback: Si no es JSON válido, analizar si parece SQL
+        cleaned_text = cleaned_content.strip
+
+        if cleaned_text.match?(/^SELECT\s+/i)
+          # Es SQL plano (fallback antiguo)
+          sql = cleaned_text.gsub(/^sql:/i, '').gsub(/;$/, '').strip
+          return { sql: sql, suggested_questions: [] }
+        else
+          # Es una respuesta de texto plano (fallback nuevo para CASO B mal formado)
+          return { text_answer: cleaned_text, suggested_questions: [] }
+        end
       end
     rescue => e
       Rails.logger.error "Error procesando respuesta Gemini: #{e.message}"
