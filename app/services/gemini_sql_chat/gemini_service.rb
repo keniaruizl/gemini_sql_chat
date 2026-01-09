@@ -99,6 +99,7 @@ module GeminiSqlChat
   def build_prompt(user_question, conversation_history = [])
     schema_context = get_schema_context
     history_context = build_history_context(conversation_history)
+    additional_context = get_additional_context
 
     <<~PROMPT
       Eres un experto en SQL para PostgreSQL. Tu tarea es convertir preguntas en lenguaje natural a queries SQL y sugerir preguntas de seguimiento relevantes.
@@ -124,6 +125,9 @@ module GeminiSqlChat
       1. Genera 2-3 preguntas de seguimiento relevantes y útiles basadas en el contexto
       2. Las preguntas deben ser naturales y específicas al dominio de la base de datos
       3. Considera el historial conversacional para hacer sugerencias coherentes
+
+      CONTEXTO ADICIONAL Y REGLAS DE NEGOCIO PROPIAS DEL PROYECTO:
+      #{additional_context}
 
       FORMATO DE RESPUESTA:
       Debes responder ÚNICAMENTE con un objeto JSON válido con la siguiente estructura:
@@ -269,6 +273,13 @@ module GeminiSqlChat
     ]
 
     dangerous_patterns.any? { |pattern| text.match?(pattern) }
+  end
+
+  def get_additional_context
+    context = GeminiSqlChat.additional_context
+    return "" if context.blank?
+
+    context.is_a?(Proc) ? context.call : context
   end
   end
 end

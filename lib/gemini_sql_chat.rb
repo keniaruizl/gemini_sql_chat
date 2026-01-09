@@ -3,5 +3,9 @@ require "gemini_sql_chat/engine"
 require "httparty"
 
 module GeminiSqlChat
-  # Your code goes here...
+  mattr_accessor :additional_context
+
+  def self.setup
+    yield self
+  end
 end

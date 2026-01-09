@@ -65,6 +65,23 @@ Si tu aplicación utiliza otro layout (por ejemplo `application`), puedes crear 
 GeminiSqlChat::ChatController.layout "application"
 ```
 
+### Contexto de Negocio Personalizado (Custom Context)
+Puedes inyectar reglas de negocio específicas o descripciones adicionales que se enviarán al modelo de IA en cada consulta. Esto es útil para explicarle al asistente lógica específica de tu dominio.
+
+En tu initializer `config/initializers/gemini_chat.rb`:
+
+```ruby
+GeminiSqlChat.setup do |config|
+  # Opción A: Texto estático
+  config.additional_context = "Solo considera ventas 'Completadas'. La tabla 'users' son los empleados."
+
+  # Opción B: Bloque dinámico (se evalúa en cada request)
+  config.additional_context = -> { 
+    "Hoy es #{Date.today}. El usuario actual tiene rol: #{Current.user&.role}" 
+  }
+end
+```
+
 ### Modelos de Usuario
 El motor asume que existe un modelo `User` y un método `current_user` (como el que proporciona Devise).
 
