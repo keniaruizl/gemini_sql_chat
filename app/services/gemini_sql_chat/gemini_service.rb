@@ -299,31 +299,58 @@ module GeminiSqlChat
         # Fallback: Si no es JSON válido, analizar si parece SQL
         cleaned_text = cleaned_content.strip
 
-        if cleaned_text.match?(/^SELECT\s+/i)
+        # Primero normalizar: reemplazar newlines literales y escapados
+        normalized_for_check = cleaned_text.gsub(/\\n/, ' ').gsub(/\n/, ' ').gsub(/\s+/, ' ').strip
+
+        if normalized_for_check.match?(/^SELECT\s+/i)
           # Es SQL plano (fallback antiguo)
-          sql = cleaned_text.gsub(/^sql:/i, '').gsub(/;$/, '').strip
+          sql = normalized_for_check.gsub(/^sql:/i, '').gsub(/;$/, '').strip
           return { sql: sql, suggested_questions: [] }
           
         elsif cleaned_text.include?('"sql"')
           # Intento de JSON SQL fallido/truncado
-          match = cleaned_text.match(/"sql"\s*:\s*"(.*?)"/m) || cleaned_text.match(/"sql"\s*:\s*"(.*)/m)
+          # Extraer todo después de "sql": " hasta el final o hasta "}
+          match = cleaned_text.match(/"sql"\s*:\s*"(.+)/m)
           
-          sql = match ? match[1] : cleaned_text
-          # Limpiar artefactos JSON
-          sql = sql.gsub(/\"\}\s*$/, '').gsub(/\"\s*$/, '').gsub(/\\n/, ' ').strip
-          # Des-escapar comillas
-          sql = sql.gsub('\"', '"')
+          if match
+            sql = match[1]
+            # Limpiar final de JSON si existe
+            sql = sql.gsub(/"\s*,?\s*"suggested_questions".*$/m, '')
+            sql = sql.gsub(/"\s*\}\s*$/m, '')
+            sql = sql.gsub(/"\s*$/m, '')
+            # Reemplazar newlines (escapados Y reales)
+            sql = sql.gsub(/\\n/, ' ').gsub(/\n/, ' ')
+            # Des-escapar comillas
+            sql = sql.gsub(/\\"/, '"')
+            # Limpiar espacios múltiples
+            sql = sql.gsub(/\s+/, ' ').strip
+          else
+            sql = cleaned_text
+          end
           
-          return { sql: sql, suggested_questions: [] }
+          # Verificar que realmente sea SELECT después de limpieza
+          if sql.match?(/^SELECT\s+/i)
+            return { sql: sql, suggested_questions: [] }
+          else
+            # Si no es SELECT válido, tratarlo como texto
+            return { text_answer: "La consulta no pudo ser procesada correctamente. Por favor, intenta reformular tu pregunta.", suggested_questions: [] }
+          end
 
         elsif cleaned_text.include?('"text_answer"')
           # Es un intento de JSON que falló (posiblemente truncado o mal formado)
-          # Intentamos rescatar el texto con regex
-          match = cleaned_text.match(/"text_answer"\s*:\s*"(.*?)"/m) || cleaned_text.match(/"text_answer"\s*:\s*"(.*)/m)
+          match = cleaned_text.match(/"text_answer"\s*:\s*"(.+)/m)
           
-          text = match ? match[1] : cleaned_text
-          # Limpiar caracteres de cierre de JSON si quedaron pegados (ej. "} o " })
-          text = text.gsub(/\"\}\s*$/, '').gsub(/\"\s*$/, '').strip
+          if match
+            text = match[1]
+            # Limpiar final de JSON si existe
+            text = text.gsub(/"\s*,?\s*"suggested_questions".*$/m, '')
+            text = text.gsub(/"\s*\}\s*$/m, '')
+            text = text.gsub(/"\s*$/m, '')
+            # Des-escapar caracteres
+            text = text.gsub(/\\n/, ' ').gsub(/\\"/, '"').strip
+          else
+            text = cleaned_text
+          end
           
           return { text_answer: text, suggested_questions: [] }
         else
