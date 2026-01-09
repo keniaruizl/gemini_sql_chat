@@ -465,15 +465,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let contentHTML = '';
 
+    // Contenido principal (Resumen o Texto)
+    if (data.summary) {
+      contentHTML += `
+        <div class="prose dark:prose-invert text-sm max-w-none mb-3">
+          <p class="leading-relaxed whitespace-pre-line">${escapeHtml(data.summary)}</p>
+        </div>
+      `;
+    }
+
+    // Tabla de resultados (si existe)
     if (data.results && data.results.length > 0) {
-      contentHTML = `
-        <p class="text-sm text-gray-700 dark:text-gray-300 mb-3">
-          ✅ Encontré <strong>${data.count}</strong> ${data.count === 1 ? 'resultado' : 'resultados'}
+      contentHTML += `
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2 mt-4 font-medium uppercase tracking-wide">
+          Resultados (${data.count})
         </p>
         ${renderTable(data.columns, data.results)}
       `;
-    } else {
-      contentHTML = `
+    } else if (!data.summary) {
+      // Fallback si no hay resumen ni resultados
+      contentHTML += `
         <p class="text-sm text-gray-600 dark:text-gray-400">
           No se encontraron resultados para esta consulta.
         </p>
@@ -729,7 +740,12 @@ document.addEventListener('DOMContentLoaded', function() {
           columns: msg.columns || [],
           count: msg.results_count || 0,
           sql: msg.sql_query,
-          suggested_questions: msg.suggested_questions || []
+          results: msg.results || [],
+          columns: msg.columns || [],
+          count: msg.results_count || 0,
+          sql: msg.sql_query,
+          suggested_questions: msg.suggested_questions || [],
+          summary: msg.content // Usar el contenido guardado como resumen
         };
 
         // Usar la función addBotMessage existente para mantener consistencia

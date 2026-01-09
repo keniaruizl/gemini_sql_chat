@@ -44,21 +44,24 @@ module GeminiSqlChat
       gemini_response = gemini_service.generate_sql(user_question, conversation_history)
 
       # Extraer SQL y preguntas sugeridas
-      sql_query = gemini_response[:sql]
+      sql_query = nil
       suggested_questions = gemini_response[:suggested_questions] || []
+      assistant_content = ""
+      formatted_results = []
 
-      # Ejecutar query
-      results = gemini_service.execute_query(sql_query)
-
-      # Formatear resultados
-      formatted_results = results.map do |row|
-        row.transform_keys(&:to_s)
+      # Manejar diferentes tipos de respuesta
+      if gemini_response[:type] == :sql_result
+        sql_query = gemini_response[:sql]
+        formatted_results = gemini_response[:results].map { |row| row.transform_keys(&:to_s) }
+        assistant_content = gemini_response[:summary] || "Se encontraron #{formatted_results.length} resultados"
+      elsif gemini_response[:type] == :text_only
+        assistant_content = gemini_response[:text]
       end
 
-      # Guardar respuesta del asistente con los resultados y preguntas sugeridas
+      # Guardar respuesta del asistente
       assistant_message = conversation.messages.create!(
         role: 'assistant',
-        content: "Se encontraron #{formatted_results.length} resultados",
+        content: assistant_content,
         sql_query: sql_query,
         results_count: formatted_results.length,
         results_data: formatted_results,
@@ -79,7 +82,8 @@ module GeminiSqlChat
         results: formatted_results,
         columns: formatted_results.first&.keys || [],
         count: formatted_results.length,
-        suggested_questions: suggested_questions
+        suggested_questions: suggested_questions,
+        summary: assistant_content # Add summary to JSON response
       }
     rescue => e
       Rails.logger.error "Error en chat query: #{e.message}"
