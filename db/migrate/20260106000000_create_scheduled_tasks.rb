@@ -1,7 +1,7 @@
 class CreateScheduledTasks < ActiveRecord::Migration[7.1]
   def change
     create_table :gemini_sql_chat_scheduled_tasks do |t|
-      t.references :user, null: false
+      t.references :user, null: false, index: true
       t.references :conversation, null: true, foreign_key: { to_table: :gemini_sql_chat_conversations }
       t.string :name, null: false
       t.text :question, null: false
@@ -22,6 +22,6 @@ class CreateScheduledTasks < ActiveRecord::Migration[7.1]
     add_index :gemini_sql_chat_scheduled_tasks, :deleted_at
     add_index :gemini_sql_chat_scheduled_tasks, :next_run_at
     add_index :gemini_sql_chat_scheduled_tasks, :active
-    add_index :gemini_sql_chat_scheduled_tasks, :user_id
+    # No agregamos índice de user_id aquí porque t.references ya lo crea automáticamente
   end
 end
