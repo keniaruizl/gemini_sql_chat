@@ -2,7 +2,7 @@ class CreateScheduledTasks < ActiveRecord::Migration[7.1]
   def change
     create_table :gemini_sql_chat_scheduled_tasks do |t|
       t.references :user, null: false, index: true
-      t.references :conversation, null: true, foreign_key: { to_table: :gemini_sql_chat_conversations }
+      t.references :gemini_sql_chat_conversation, null: true, foreign_key: true, index: { name: 'index_scheduled_tasks_on_conversation_id' }
       t.string :name, null: false
       t.text :question, null: false
       t.string :schedule_type, null: false # 'interval' o 'cron'
