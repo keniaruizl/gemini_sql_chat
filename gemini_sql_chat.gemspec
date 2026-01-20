@@ -21,4 +21,5 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "rails", ">= 7.1.5.1"
   spec.add_dependency "httparty"
+  spec.add_dependency "rufus-scheduler"
 end

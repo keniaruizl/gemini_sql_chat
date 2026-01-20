@@ -27,6 +27,39 @@ module GeminiSqlChat
     end
 
     begin
+      # Verificar si el usuario quiere programar una tarea
+      schedule_info = GeminiSqlChat::ScheduleParserService.parse_schedule_command(user_question)
+      
+      if schedule_info && schedule_info[:has_schedule]
+        # Crear tarea programada
+        conversation = get_or_create_conversation(conversation_id)
+        
+        task = GeminiSqlChat::ScheduledTask.create!(
+          user: current_user,
+          conversation: conversation,
+          name: schedule_info[:question].truncate(100),
+          question: schedule_info[:question],
+          schedule_type: schedule_info[:schedule_type],
+          interval_seconds: schedule_info[:interval_seconds],
+          next_run_at: Time.current + schedule_info[:interval_seconds].seconds,
+          active: true
+        )
+
+        # Ejecutar inmediatamente la primera vez
+        result = task.execute!
+
+        render json: {
+          success: true,
+          scheduled: true,
+          task_id: task.id,
+          task_name: task.name,
+          schedule: schedule_info[:schedule_text],
+          message: "Tarea programada creada: '#{task.name}' - Se ejecutará #{schedule_info[:schedule_text]}",
+          result: result
+        }
+        return
+      end
+
       # Obtener o crear conversación
       conversation = get_or_create_conversation(conversation_id)
 
@@ -180,6 +213,42 @@ module GeminiSqlChat
     if session[:current_chat_conversation_id] == conversation.id
       session[:current_chat_conversation_id] = nil
     end
+
+    render json: { success: true }
+  end
+
+  def scheduled_tasks
+    tasks = GeminiSqlChat::ScheduledTask.for_user(current_user.id).active.order(next_run_at: :asc)
+
+    render json: {
+      success: true,
+      tasks: tasks.map { |task|
+        {
+          id: task.id,
+          name: task.name,
+          question: task.question,
+          schedule: task.human_readable_schedule,
+          next_run_at: task.next_run_at.iso8601,
+          last_run_at: task.last_run_at&.iso8601,
+          run_count: task.run_count,
+          last_result: task.last_result,
+          last_error: task.last_error
+        }
+      }
+    }
+  end
+
+  def delete_scheduled_task
+    task_id = params[:id]
+    task = GeminiSqlChat::ScheduledTask.for_user(current_user.id).find_by(id: task_id)
+
+    if task.nil?
+      render json: { success: false, error: 'Tarea no encontrada' }, status: :not_found
+      return
+    end
+
+    task.update(active: false)
+    task.destroy
 
     render json: { success: true }
   end

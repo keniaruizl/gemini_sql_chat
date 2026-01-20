@@ -1,4 +1,26 @@
 <div class="flex h-[calc(100vh-200px)] w-full gap-4">
+  <!-- Modal de Tareas Programadas -->
+  <div id="scheduled-tasks-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Tareas Programadas</h3>
+        <button
+          id="close-scheduled-tasks-modal"
+          class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="scheduled-tasks-list" class="flex-1 overflow-y-auto p-6">
+        <div class="text-center text-gray-500 dark:text-gray-400">
+          Cargando...
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Sidebar de conversaciones -->
   <div id="conversations-sidebar" class="w-64 flex-shrink-0 flex flex-col overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg">
     <!-- Header del sidebar -->
@@ -39,6 +61,16 @@
         </span>
       </div>
       <div class="flex items-center gap-2">
+        <button
+          id="scheduled-tasks-btn"
+          class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 text-xs text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+          title="Tareas programadas"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span id="scheduled-tasks-count">0</span> tareas
+        </button>
         <span id="context-indicator" class="hidden items-center gap-1.5 px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
@@ -85,6 +117,9 @@
             </ul>
             <p class="text-xs mt-3 text-primary font-medium">
               💡 Tip: Puedes hacer preguntas de seguimiento como "¿Y cuántas hay en Jalisco?" basándote en resultados anteriores
+            </p>
+            <p class="text-xs mt-3 text-purple-600 dark:text-purple-400 font-medium">
+              ⏰ Tareas Programadas: Puedes programar consultas automáticas. Ejemplo: "Cada 5 minutos, ¿cuántas ventas hay hoy?"
             </p>
           </div>
           <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500 px-1">
@@ -327,6 +362,11 @@ document.addEventListener('DOMContentLoaded', function() {
   const conversationsList = document.getElementById('conversations-list');
   const contextIndicator = document.getElementById('context-indicator');
   const contextCount = document.getElementById('context-count');
+  const scheduledTasksBtn = document.getElementById('scheduled-tasks-btn');
+  const scheduledTasksCount = document.getElementById('scheduled-tasks-count');
+  const scheduledTasksModal = document.getElementById('scheduled-tasks-modal');
+  const closeScheduledTasksModal = document.getElementById('close-scheduled-tasks-modal');
+  const scheduledTasksList = document.getElementById('scheduled-tasks-list');
 
   let isProcessing = false;
   let currentConversationId = null;
@@ -382,6 +422,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Cargar conversaciones al iniciar
   loadConversations();
+  
+  // Cargar tareas programadas al iniciar
+  loadScheduledTasks();
+
+  // Event listeners para tareas programadas
+  scheduledTasksBtn.addEventListener('click', function() {
+    scheduledTasksModal.classList.remove('hidden');
+    loadScheduledTasks();
+  });
+
+  closeScheduledTasksModal.addEventListener('click', function() {
+    scheduledTasksModal.classList.add('hidden');
+  });
+
+  // Cerrar modal al hacer click fuera
+  scheduledTasksModal.addEventListener('click', function(e) {
+    if (e.target === scheduledTasksModal) {
+      scheduledTasksModal.classList.add('hidden');
+    }
+  });
 
   function updateSubmitButton(processing) {
     if (processing) {
@@ -627,16 +687,22 @@ document.addEventListener('DOMContentLoaded', function() {
       updateSubmitButton(false);
 
       if (data.success) {
-        // Actualizar conversation_id si es nueva
-        if (data.conversation_id) {
-          currentConversationId = data.conversation_id;
-          updateContextIndicator();
+        // Si es una tarea programada
+        if (data.scheduled) {
+          addScheduledTaskMessage(data);
+          loadScheduledTasks();
+        } else {
+          // Actualizar conversation_id si es nueva
+          if (data.conversation_id) {
+            currentConversationId = data.conversation_id;
+            updateContextIndicator();
+          }
+
+          addBotMessage(data);
+
+          // Recargar lista de conversaciones
+          loadConversations();
         }
-
-        addBotMessage(data);
-
-        // Recargar lista de conversaciones
-        loadConversations();
       } else {
         addErrorMessage(data.error || 'Error al procesar la pregunta');
       }
@@ -861,10 +927,161 @@ document.addEventListener('DOMContentLoaded', function() {
     return div.innerHTML;
   }
 
+  function loadScheduledTasks() {
+    fetch('/gemini_chat/scheduled_tasks', {
+      headers: {
+        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        scheduledTasksCount.textContent = data.tasks.length;
+        renderScheduledTasks(data.tasks);
+      }
+    })
+    .catch(error => {
+      console.error('Error loading scheduled tasks:', error);
+    });
+  }
+
+  function renderScheduledTasks(tasks) {
+    if (tasks.length === 0) {
+      scheduledTasksList.innerHTML = `
+        <div class="text-center text-gray-500 dark:text-gray-400 py-8">
+          <svg class="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <p>No hay tareas programadas</p>
+          <p class="text-sm mt-2">Usa comandos como "cada 5 minutos" para crear una tarea</p>
+        </div>
+      `;
+      return;
+    }
+
+    scheduledTasksList.innerHTML = tasks.map(task => {
+      const nextRun = new Date(task.next_run_at);
+      const lastRun = task.last_run_at ? new Date(task.last_run_at) : null;
+      
+      return `
+        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex-1">
+              <h4 class="font-semibold text-gray-900 dark:text-white mb-1">${escapeHtml(task.name)}</h4>
+              <p class="text-sm text-gray-600 dark:text-gray-400">${escapeHtml(task.question)}</p>
+            </div>
+            <button
+              onclick="deleteScheduledTask(${task.id})"
+              class="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+              title="Eliminar tarea"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-4 text-xs">
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Programación:</span>
+              <p class="font-medium text-gray-900 dark:text-white">${escapeHtml(task.schedule)}</p>
+            </div>
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Próxima ejecución:</span>
+              <p class="font-medium text-gray-900 dark:text-white">${nextRun.toLocaleString('es-ES')}</p>
+            </div>
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Ejecuciones:</span>
+              <p class="font-medium text-gray-900 dark:text-white">${task.run_count}</p>
+            </div>
+            ${lastRun ? `
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Última ejecución:</span>
+              <p class="font-medium text-gray-900 dark:text-white">${lastRun.toLocaleString('es-ES')}</p>
+            </div>
+            ` : ''}
+          </div>
+          ${task.last_result ? `
+            <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+              <span class="text-xs text-gray-500 dark:text-gray-400">Último resultado:</span>
+              <p class="text-xs text-gray-700 dark:text-gray-300 mt-1">${escapeHtml(task.last_result)}</p>
+            </div>
+          ` : ''}
+          ${task.last_error ? `
+            <div class="mt-3 pt-3 border-t border-red-200 dark:border-red-800">
+              <span class="text-xs text-red-600 dark:text-red-400">Último error:</span>
+              <p class="text-xs text-red-700 dark:text-red-300 mt-1">${escapeHtml(task.last_error)}</p>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function deleteScheduledTask(taskId) {
+    if (!confirm('¿Eliminar esta tarea programada?')) return;
+
+    fetch(`/gemini_chat/scheduled_tasks/${taskId}`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        loadScheduledTasks();
+      }
+    })
+    .catch(error => {
+      console.error('Error deleting scheduled task:', error);
+    });
+  }
+
+  function addScheduledTaskMessage(data) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'flex items-start gap-3 animate-fade-in';
+
+    const timestamp = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+    messageDiv.innerHTML = `
+      <div class="flex-shrink-0">
+        <div class="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white text-sm font-semibold">
+          ⏰
+        </div>
+      </div>
+      <div class="flex-1 space-y-2">
+        <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-2xl rounded-tl-none px-4 py-3 max-w-[95%]">
+          <div class="flex items-start gap-2 mb-2">
+            <svg class="w-5 h-5 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+              <p class="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-1">Tarea Programada Creada</p>
+              <p class="text-sm text-purple-800 dark:text-purple-200">${escapeHtml(data.message)}</p>
+            </div>
+          </div>
+          ${data.result && data.result.success ? `
+            <div class="mt-3 pt-3 border-t border-purple-200 dark:border-purple-800">
+              <p class="text-xs text-purple-600 dark:text-purple-400 mb-1">Primera ejecución:</p>
+              <p class="text-xs text-purple-700 dark:text-purple-300">${escapeHtml(data.result.result)}</p>
+            </div>
+          ` : ''}
+        </div>
+        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500 px-1">
+          <span>${timestamp}</span>
+        </div>
+      </div>
+    `;
+
+    messagesContainer.appendChild(messageDiv);
+    scrollToBottom();
+  }
+
   // Exponer funciones globalmente para onclick handlers
   window.chatApp = {
     loadConversation,
-    deleteConversation
+    deleteConversation,
+    deleteScheduledTask
   };
 
   // Initial scroll
