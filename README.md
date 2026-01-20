@@ -5,7 +5,8 @@ Un motor de Rails que proporciona un chatbot inteligente con capacidades de gene
 ## Características
 
 *   **Conversión de Lenguaje Natural a SQL**: Transforma preguntas en español a consultas SQL ejecutables.
-*   **Descubrimiento Automático de Esquema**: Detecta tablsa y relaciones automáticamente para dar contexto a la IA.
+*   **Descubrimiento Automático de Esquema**: Detecta tablas y relaciones automáticamente para dar contexto a la IA.
+*   **Tareas Programadas**: Programa consultas para ejecutarse automáticamente en intervalos regulares (ej: "cada 5 minutos").
 *   **Seguridad**: Solo permite consultas `SELECT` y bloquea comandos peligrosos.
 *   **Interfaz Lista para Usar**: Incluye una interfaz de chat moderna y responsiva.
 *   **Historial de Conversaciones**: Guarda el historial de mensajes por usuario.
@@ -112,6 +113,29 @@ El motor asume que existe un modelo `User` y un método `current_user` (como el 
 ## Uso
 
 Navega a `/gemini_chat` en tu navegador para interactuar con el asistente.
+
+### Tareas Programadas
+
+Puedes programar consultas automáticas usando comandos como:
+- "Cada 5 minutos, ¿cuántas ventas hay hoy?"
+- "Repite cada hora, ¿cuál es el total de pedidos pendientes?"
+
+Ver [README_SCHEDULED_TASKS.md](README_SCHEDULED_TASKS.md) para más detalles sobre tareas programadas.
+
+### Configurar el Scheduler
+
+Para que las tareas programadas se ejecuten automáticamente, necesitas configurar el scheduler:
+
+**Desarrollo:**
+```bash
+rails gemini_sql_chat:scheduler
+```
+
+**Producción (Cron):**
+```bash
+# Agregar a crontab - ejecutar cada minuto
+* * * * * cd /ruta/a/tu/app && bin/rails gemini_sql_chat:run_scheduled_tasks RAILS_ENV=production
+```
 
 ## Licencia
 
