@@ -4,6 +4,12 @@ module GeminiSqlChat
 
   base_uri 'https://generativelanguage.googleapis.com'
 
+  # Timeouts por defecto para todas las llamadas a la API (evita Net::ReadTimeout)
+  default_options.update(
+    open_timeout: 30,   # segundos para establecer conexión
+    read_timeout: 120   # segundos para leer respuesta (2 min por defecto)
+  )
+
   def initialize
     @api_key = ENV['GOOGLE_GEMINI_API_KEY']
     raise 'GOOGLE_GEMINI_API_KEY no está configurada' if @api_key.blank?
@@ -84,7 +90,9 @@ module GeminiSqlChat
       body: {
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.1, maxOutputTokens: 500 }
-      }.to_json
+      }.to_json,
+      read_timeout: 120,  # 2 minutos para interpretación de resultados
+      open_timeout: 30
     )
 
     if response.success?
@@ -104,6 +112,7 @@ module GeminiSqlChat
     # we need to return the raw response or handle the JSON structure update.
     # Let's keep the existing logic but update `extract_sql_from_response` to handle the new JSON format.
     
+    # Timeouts extendidos para generación de SQL (contextos grandes pueden tardar)
     response = self.class.post(
       "/v1beta/models/gemini-2.5-flash:generateContent",
       query: { key: @api_key },
@@ -113,7 +122,8 @@ module GeminiSqlChat
         generationConfig: { temperature: 0.1, maxOutputTokens: 2048 },
         safetySettings: [{ category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }]
       }.to_json,
-      timeout: 10
+      read_timeout: 300,  # 5 minutos para leer respuesta
+      open_timeout: 60    # 1 minuto para establecer conexión
     )
 
     if response.success?
