@@ -194,10 +194,11 @@
     si su tailwind.config.js no incluye el path del gem. 
     Estas reglas garantizan que en desktop se vea el chat y haya scroll interno.
   */
+  /* Móvil: chat arriba (grande), conversaciones abajo (con scroll) */
   #gemini-chat-root {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 200px);
+    height: calc(100vh - 80px);   /* Más alto en móvil para que el chat se vea bien */
     width: 100%;
     gap: 1rem;
     overflow: hidden;
@@ -206,7 +207,7 @@
 
   #chat-panel {
     order: 1;
-    flex: 1 1 auto;
+    flex: 1 1 auto;   /* Chat se expande y ocupa todo el espacio disponible */
     min-height: 0;
     overflow: hidden;
   }
@@ -214,7 +215,8 @@
   #conversations-sidebar {
     order: 2;
     width: 100%;
-    max-height: 50vh;
+    max-height: 28vh;  /* Lista compacta, deja ~70% de pantalla para el chat */
+    flex: 0 0 auto;
     min-height: 0;
     overflow: hidden;
   }
@@ -224,22 +226,23 @@
     min-height: 0;
   }
 
-  /* Desktop */
+  /* Desktop: contenedor más alto, sidebar más ancho */
   @media (min-width: 768px) {
     #gemini-chat-root {
       flex-direction: row;
-      height: calc(100vh - 200px);
+      height: calc(100vh - 100px);  /* Más alto: menos margen superior/inferior */
+    }
+
+    #chat-panel {
+      order: 2;
+      min-height: 0;  /* En desktop no forzamos min-height */
     }
 
     #conversations-sidebar {
       order: 1;
       max-height: none;
-      width: 16rem;
-      flex: 0 0 16rem;
-    }
-
-    #chat-panel {
-      order: 2;
+      width: 22rem;   /* Más ancho que antes (16rem) */
+      flex: 0 0 22rem;
     }
   }
 
