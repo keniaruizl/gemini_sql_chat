@@ -1,4 +1,4 @@
-<div class="flex flex-col md:flex-row h-[calc(100vh-200px)] w-full gap-4 overflow-hidden">
+<div id="gemini-chat-root" class="flex flex-col md:flex-row h-[calc(100vh-200px)] w-full gap-4 overflow-hidden">
   <!-- Modal de Tareas Programadas -->
   <div id="scheduled-tasks-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
     <div class="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
@@ -47,7 +47,7 @@
   </div>
 
   <!-- Panel principal de chat -->
-  <div class="order-1 md:order-2 flex-1 flex flex-col overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg mb-4 md:mb-0 md:mt-0">
+  <div id="chat-panel" class="order-1 md:order-2 flex-1 flex flex-col overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg mb-4 md:mb-0 md:mt-0">
     <!-- Header -->
     <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-6 py-4">
       <div class="flex items-center gap-3">
@@ -188,6 +188,61 @@
 </div>
 
 <style>
+  /* 
+    Layout fallback (importante):
+    En la app host, Tailwind puede NO generar clases md:* de las vistas del engine
+    si su tailwind.config.js no incluye el path del gem. 
+    Estas reglas garantizan que en desktop se vea el chat y haya scroll interno.
+  */
+  #gemini-chat-root {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 200px);
+    width: 100%;
+    gap: 1rem;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  #chat-panel {
+    order: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  #conversations-sidebar {
+    order: 2;
+    width: 100%;
+    max-height: 50vh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  #conversations-list,
+  #chat-messages {
+    min-height: 0;
+  }
+
+  /* Desktop */
+  @media (min-width: 768px) {
+    #gemini-chat-root {
+      flex-direction: row;
+      height: calc(100vh - 200px);
+    }
+
+    #conversations-sidebar {
+      order: 1;
+      max-height: none;
+      width: 16rem;
+      flex: 0 0 16rem;
+    }
+
+    #chat-panel {
+      order: 2;
+    }
+  }
+
   /* Animaciones */
   @keyframes fade-in {
     from {
